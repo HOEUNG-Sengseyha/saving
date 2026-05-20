@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Saving Tracker & Planning Dashboard | Finance</title>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        :root {
+            --bg: #f0f2f5;
+            --card: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --border: #e2e8f0;
+            --green: #10b981;
+            --green-dark: #059669;
+            --red: #ef4444;
+            --red-dark: #dc2626;
+            --blue: #3b82f6;
+            --blue-dark: #2563eb;
+            --yellow: #f59e0b;
+            --gray-soft: #f8fafc;
+            --shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text-primary);
+            padding: 1.5rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+            gap: 1rem;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--blue), #06b6d4);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        button, .btn {
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 0.5rem 1.2rem;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-primary {
+            background: var(--blue);
+            border-color: var(--blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--blue-dark);
+        }
+
+        .btn-danger {
+            background: var(--red);
+            border-color: var(--red);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+        }
+
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.2rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            background: var(--card);
+            border-radius: 1.25rem;
+            padding: 1.2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .kpi-card h4 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .kpi-number {
+            font-size: 1.9rem;
+            font-weight: 800;
+        }
+
+        .green { color: var(--green); }
+        .red { color: var(--red); }
+        .blue { color: var(--blue); }
+
+        /* Charts row */
+        .charts-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-card {
+            background: var(--card);
+            border-radius: 1.25rem;
+            padding: 1rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+
+        .chart-card h3 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+
+        canvas {
+            max-height: 260px;
+            width: 100%;
+        }
+
+        /* Section */
+        .section {
+            background: var(--card);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 1.2rem;
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.2rem;
+        }
+
+        select, input {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            border-radius: 30px;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+        }
+
+        /* Transaction table */
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 0.75rem 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .badge {
+            padding: 0.2rem 0.7rem;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .badge-income { background: #d1fae5; color: #065f46; }
+        .badge-expense { background: #fee2e2; color: #991b1b; }
+        .badge-saving { background: #dbeafe; color: #1e40af; }
+
+        .goal-item {
+            background: var(--gray-soft);
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 5px solid var(--blue);
+        }
+
+        .progress-bar {
+            background: #e2e8f0;
+            border-radius: 20px;
+            height: 8px;
+            width: 100%;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+
+        .progress-fill {
+            background: var(--green);
+            width: 0%;
+            height: 100%;
+            transition: width 0.4s;
+        }
+
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .status-track { color: var(--green); font-weight: bold; }
+        .status-behind { color: var(--red); font-weight: bold; }
+        .status-completed { color: var(--blue); font-weight: bold; }
+
+        .icon-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0.2rem 0.4rem;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: var(--card);
+            border-radius: 1.5rem;
+            max-width: 500px;
+            width: 90%;
+            padding: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.3rem;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.6rem;
+            border-radius: 12px;
+        }
+
+        @media (max-width: 720px) {
+            body { padding: 1rem; }
+            .charts-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📊 Saving Tracker & Planning Dashboard</h1>
+        <div class="toolbar">
+            <button id="exportDataBtn" class="btn-outline">📁 Export JSON</button>
+            <button id="importDataBtn" class="btn-outline">📂 Import JSON</button>
+            <button id="resetAllBtn" class="btn-danger">🗑 Reset All</button>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <div class="kpi-card"><h4>💰 Total Income</h4><div class="kpi-number green" id="totalIncome">0</div></div>
+        <div class="kpi-card"><h4>📉 Total Expense</h4><div class="kpi-number red" id="totalExpense">0</div></div>
+        <div class="kpi-card"><h4>🏦 Total Savings</h4><div class="kpi-number blue" id="totalSavings">0</div></div>
+        <div class="kpi-card"><h4>🎯 Active Goals</h4><div class="kpi-number" id="activeGoalsCount">0</div></div>
+        <div class="kpi-card"><h4>⚖️ Net Balance</h4><div class="kpi-number green" id="netBalance">0</div></div>
+    </div>
+
+    <!-- CHARTS ROW -->
+    <div class="charts-row">
+        <div class="chart-card"><h3>📊 Monthly Income vs Expense</h3><canvas id="incomeExpenseChart"></canvas></div>
+        <div class="chart-card"><h3>📈 Savings Trend Over Time</h3><canvas id="savingsTrendChart"></canvas></div>
+        <div class="chart-card"><h3>🥧 Spending by Category</h3><canvas id="categoryPieChart"></canvas></div>
+        <div class="chart-card"><h3>🎯 Goal Completion (Doughnut)</h3><canvas id="goalDoughnutChart"></canvas><select id="goalSelectDoughnut" style="margin-top: 10px; width:100%"></select></div>
+    </div>
+
+    <!-- Transaction Tracker Section -->
+    <div class="section">
+        <div class="section-header">
+            <span style="font-weight: 700; font-size:1.2rem;">📋 Transaction Records</span>
+            <button id="addTransBtn" class="btn-primary">+ New Transaction</button>
+        </div>
+        <div class="filter-bar">
+            <select id="filterMonth"><option value="all">All Months</option></select>
+            <select id="filterCategoryTrans"><option value="all">All Categories</option></select>
+            <select id="filterGoalTrans"><option value="all">All Goals</option></select>
+        </div>
+        <div class="table-wrapper" id="transactionsTable"></div>
+    </div>
+
+    <!-- Saving Goals Section -->
+    <div class="section">
+        <div class="section-header">
+            <span style="font-weight: 700; font-size:1.2rem;">🏆 Saving Goals & Planning</span>
+            <button id="addGoalBtn" class="btn-primary">+ New Goal</button>
+        </div>
+        <div id="goalsList"></div>
+    </div>
+</div>
+
+<script>
+    // ---------- DATA MODELS ----------
+    let transactions = [];
+    let goals = [];
+    let nextTransId = 1, nextGoalId = 1;
+
+    // Chart instances
+    let barChart, lineChart, pieChart, doughnutChart;
+
+    // Load / Save localStorage
+    function loadData() {
+        const stored = localStorage.getItem("savingTrackerPlus");
+        if (stored) {
+            try {
+                const data = JSON.parse(stored);
+                transactions = data.transactions || [];
+                goals = data.goals || [];
+                if (transactions.length) nextTransId = Math.max(...transactions.map(t => t.id), 0) + 1;
+                if (goals.length) nextGoalId = Math.max(...goals.map(g => g.id), 0) + 1;
+                recalcAllGoalSaved();
+            } catch(e) { console.warn(e); }
+        } else {
+            // Sample demo data
+            transactions = [
+                { id: 1, date: "2026-05-01", title: "Salary", amount: 3200, type: "income", category: "Salary", goalId: null },
+                { id: 2, date: "2026-05-10", title: "Groceries", amount: 280, type: "expense", category: "Food", goalId: null },
+                { id: 3, date: "2026-05-15", title: "Freelance", amount: 600, type: "income", category: "Business", goalId: null },
+                { id: 4, date: "2026-05-20", title: "Rent", amount: 1200, type: "expense", category: "Rent", goalId: null },
+                { id: 5, date: "2026-05-22", title: "Savings Deposit", amount: 500, type: "saving", category: "Savings", goalId: 1 },
+                { id: 6, date: "2026-04-12", title: "Bonus", amount: 400, type: "income", category: "Salary", goalId: null },
+            ];
+            goals = [
+                { id: 1, name: "Buy Motorbike", target: 2000, saved: 500, startDate: "2026-01-01", endDate: "2026-12-31" },
+                { id: 2, name: "Vacation Fund", target: 1500, saved: 300, startDate: "2026-03-01", endDate: "2026-09-30" }
+            ];
+            nextTransId = 7; nextGoalId = 3;
+            recalcAllGoalSaved();
+        }
+        recalcAllGoalSaved();
+        updateAllUI();
+        saveToLocal();
+    }
+
+    function recalcAllGoalSaved() {
+        goals.forEach(goal => {
+            let total = 0;
+            transactions.forEach(t => {
+                if (t.goalId === goal.id && (t.type === 'income' || t.type === 'saving')) total += t.amount;
+                else if (t.goalId === goal.id && t.type === 'expense') total -= t.amount;
+            });
+            goal.saved = Math.max(0, total);
+        });
+    }
+
+    function saveToLocal() {
+        const data = { transactions, goals };
+        localStorage.setItem("savingTrackerPlus", JSON.stringify(data));
+    }
+
+    // Helper functions
+    function formatMoney(val) { return val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+    function computeTotals() {
+        let totalInc = 0, totalExp = 0, totalSav = 0;
+        transactions.forEach(t => {
+            if (t.type === 'income') totalInc += t.amount;
+            else if (t.type === 'expense') totalExp += t.amount;
+            else if (t.type === 'saving') totalSav += t.amount;
+        });
+        const netBalance = totalInc - totalExp + totalSav;
+        const activeGoals = goals.filter(g => g.saved < g.target).length;
+        return { totalInc, totalExp, totalSav, netBalance, activeGoals };
+    }
+
+    function updateKPI() {
+        const { totalInc, totalExp, totalSav, netBalance, activeGoals } = computeTotals();
+        document.getElementById('totalIncome').innerText = formatMoney(totalInc);
+        document.getElementById('totalExpense').innerText = formatMoney(totalExp);
+        document.getElementById('totalSavings').innerText = formatMoney(totalSav);
+        document.getElementById('netBalance').innerText = formatMoney(netBalance);
+        document.getElementById('activeGoalsCount').innerText = activeGoals;
+    }
+
+    // Render transactions table with filters
+    function renderTransactions() {
+        let filtered = [...transactions];
+        const month = document.getElementById('filterMonth').value;
+        const cat = document.getElementById('filterCategoryTrans').value;
+        const goalFilter = document.getElementById('filterGoalTrans').value;
+        if (month !== 'all') filtered = filtered.filter(t => t.date.startsWith(month));
+        if (cat !== 'all') filtered = filtered.filter(t => t.category === cat);
+        if (goalFilter !== 'all') {
+            const goalIdNum = goalFilter === 'null' ? null : parseInt(goalFilter);
+            filtered = filtered.filter(t => t.goalId === goalIdNum);
+        }
+        const container = document.getElementById('transactionsTable');
+        if (filtered.length === 0) { container.innerHTML = '<div style="padding:1rem; text-align:center;">No transactions</div>'; return; }
+        let html = `<table><thead><tr><th>Date</th><th>Title</th><th>Amount</th><th>Type</th><th>Category</th><th>Goal</th><th>Actions</th></tr></thead><tbody>`;
+        filtered.forEach(t => {
+            const goalName = t.goalId ? (goals.find(g=>g.id===t.goalId)?.name || '—') : '—';
+            html += `<tr>
+                <td>${t.date}</td>
+                <td>${escapeHtml(t.title)}</td>
+                <td>${formatMoney(t.amount)}</td>
+                <td><span class="badge badge-${t.type}">${t.type}</span></td>
+                <td>${t.category}</td>
+                <td>${goalName}</td>
+                <td><button class="icon-btn edit-trans" data-id="${t.id}">✏️</button> <button class="icon-btn delete-trans" data-id="${t.id}">🗑️</button></td>
+            </tr>`;
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+        document.querySelectorAll('.edit-trans').forEach(btn => btn.addEventListener('click', (e) => editTransaction(parseInt(btn.dataset.id))));
+        document.querySelectorAll('.delete-trans').forEach(btn => btn.addEventListener('click', (e) => deleteTransaction(parseInt(btn.dataset.id))));
+    }
+
+    function renderGoals() {
+        const container = document.getElementById('goalsList');
+        if (goals.length === 0) { container.innerHTML = '<div>No goals. Create your first saving goal!</div>'; return; }
+        let html = '';
+        goals.forEach(goal => {
+            const percent = goal.target === 0 ? 0 : (goal.saved / goal.target) * 100;
+            let status = 'Behind', statusClass = 'status-behind';
+            if (goal.saved >= goal.target) { status = 'Completed'; statusClass = 'status-completed'; }
+            else if (goal.endDate) {
+                const today = new Date().toISOString().slice(0,10);
+                if (today <= goal.endDate && percent >= 30) status = 'On Track', statusClass = 'status-track';
+                else if (today > goal.endDate && goal.saved < goal.target) status = 'Behind', statusClass = 'status-behind';
+                else status = 'On Track', statusClass = 'status-track';
+            } else { status = 'On Track'; statusClass = 'status-track'; }
+            const remaining = Math.max(0, goal.target - goal.saved);
+            html += `<div class="goal-item">
+                <div class="flex-between"><strong>🎯 ${escapeHtml(goal.name)}</strong> <span class="${statusClass}">${status}</span></div>
+                <div>Target: ${formatMoney(goal.target)} | Saved: ${formatMoney(goal.saved)} | Remaining: ${formatMoney(remaining)}</div>
+                <div class="progress-bar"><div class="progress-fill" style="width: ${percent}%"></div></div>
+                <div class="flex-between" style="margin-top:8px;">
+                    <span>${percent.toFixed(0)}%</span>
+                    <div><button class="icon-btn edit-goal" data-id="${goal.id}">✏️ Edit</button> <button class="icon-btn delete-goal" data-id="${goal.id}">🗑️</button> <button class="icon-btn assign-to-goal" data-id="${goal.id}">📎 Assign Trans</button></div>
+                </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+        document.querySelectorAll('.edit-goal').forEach(btn => btn.addEventListener('click', (e) => editGoal(parseInt(btn.dataset.id))));
+        document.querySelectorAll('.delete-goal').forEach(btn => btn.addEventListener('click', (e) => deleteGoal(parseInt(btn.dataset.id))));
+        document.querySelectorAll('.assign-to-goal').forEach(btn => btn.addEventListener('click', (e) => openAssignModal(parseInt(btn.dataset.id))));
+    }
+
+    // Chart Helpers
+    function getMonthlyComparison() {
+        const months = {};
+        transactions.forEach(t => {
+            const key = t.date.slice(0,7);
+            if (!months[key]) months[key] = { income:0, expense:0 };
+            if (t.type === 'income') months[key].income += t.amount;
+            if (t.type === 'expense') months[key].expense += t.amount;
+        });
+        const labels = Object.keys(months).sort();
+        const incomeData = labels.map(l => months[l].income);
+        const expenseData = labels.map(l => months[l].expense);
+        return { labels, incomeData, expenseData };
+    }
+
+    function getSavingsTrend() {
+        const sorted = [...transactions].sort((a,b)=>a.date.localeCompare(b.date));
+        let cumulative = 0;
+        const points = [];
+        const labels = [];
+        sorted.forEach(t => {
+            if (t.type === 'income') cumulative += t.amount;
+            else if (t.type === 'expense') cumulative -= t.amount;
+            else if (t.type === 'saving') cumulative += t.amount;
+            points.push(cumulative);
+            labels.push(t.date);
+        });
+        return { labels, savingsData: points };
+    }
+
+    function getCategorySpending() {
+        const catMap = new Map();
+        transactions.forEach(t => {
+            if (t.type === 'expense') {
+                catMap.set(t.category, (catMap.get(t.category)||0) + t.amount);
+            }
+        });
+        const labels = Array.from(catMap.keys());
+        const data = labels.map(l => catMap.get(l));
+        return { labels, data };
+    }
+
+    function updateAllCharts() {
+        // Bar chart
+        const { labels: barLabels, incomeData, expenseData } = getMonthlyComparison();
+        if (barChart) barChart.destroy();
+        const barCtx = document.getElementById('incomeExpenseChart').getContext('2d');
+        barChart = new Chart(barCtx, {
+            type: 'bar', data: { labels: barLabels, datasets: [{ label: 'Income', data: incomeData, backgroundColor: '#10b981' }, { label: 'Expense', data: expenseData, backgroundColor: '#ef4444' }] }
+        });
+        // Line chart
+        const { labels: lineLabels, savingsData } = getSavingsTrend();
+        if (lineChart) lineChart.destroy();
+        const lineCtx = document.getElementById('savingsTrendChart').getContext('2d');
+        lineChart = new Chart(lineCtx, { type: 'line', data: { labels: lineLabels, datasets: [{ label: 'Net Savings Balance', data: savingsData, borderColor: '#3b82f6', fill: false, tension: 0.3 }] } });
+        // Pie chart categories
+        const { labels: pieLabels, data: pieData } = getCategorySpending();
+        if (pieChart) pieChart.destroy();
+        const pieCtx = document.getElementById('categoryPieChart').getContext('2d');
+        pieChart = new Chart(pieCtx, { type: 'pie', data: { labels: pieLabels, datasets: [{ data: pieData, backgroundColor: ['#10b981','#f59e0b','#ef4444','#3b82f6','#8b5cf6'] }] } });
+        // Doughnut update on selection
+        updateDoughnutChart();
+    }
+
+    function updateDoughnutChart() {
+        const select = document.getElementById('goalSelectDoughnut');
+        const goalId = parseInt(select.value);
+        const goal = goals.find(g => g.id === goalId);
+        if (!goal) { if (doughnutChart) doughnutChart.destroy(); return; }
+        const completed = goal.saved;
+        const remaining = Math.max(0, goal.target - completed);
+        if (doughnutChart) doughnutChart.destroy();
+        const ctx = document.getElementById('goalDoughnutChart').getContext('2d');
+        doughnutChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: { labels: ['Saved', 'Remaining'], datasets: [{ data: [completed, remaining], backgroundColor: ['#10b981', '#e2e8f0'] }] }
+        });
+    }
+
+    function populateGoalDropdown() {
+        const select = document.getElementById('goalSelectDoughnut');
+        select.innerHTML = '<option value="">Select a goal</option>';
+        goals.forEach(g => { select.innerHTML += `<option value="${g.id}">${escapeHtml(g.name)}</option>`; });
+        select.onchange = () => updateDoughnutChart();
+        if(goals.length) select.value = goals[0].id;
+        updateDoughnutChart();
+    }
+
+    function updateFilters() {
+        const monthsSet = new Set(); const catSet = new Set();
+        transactions.forEach(t => { monthsSet.add(t.date.slice(0,7)); catSet.add(t.category); });
+        const monthSelect = document.getElementById('filterMonth');
+        monthSelect.innerHTML = '<option value="all">All Months</option>';
+        Array.from(monthsSet).sort().reverse().forEach(m => monthSelect.innerHTML += `<option value="${m}">${m}</option>`);
+        const catFilter = document.getElementById('filterCategoryTrans');
+        catFilter.innerHTML = '<option value="all">All Categories</option>';
+        catSet.forEach(c => catFilter.innerHTML += `<option value="${c}">${c}</option>`);
+        const goalFilter = document.getElementById('filterGoalTrans');
+        goalFilter.innerHTML = '<option value="all">All Goals</option><option value="null">No Goal</option>';
+        goals.forEach(g => goalFilter.innerHTML += `<option value="${g.id}">${escapeHtml(g.name)}</option>`);
+    }
+
+    function updateAllUI() { updateKPI(); renderTransactions(); renderGoals(); updateFilters(); populateGoalDropdown(); updateAllCharts(); }
+
+    // CRUD Transactions
+    function addTransaction(trans) { trans.id = nextTransId++; transactions.push(trans); recalcAllGoalSaved(); saveToLocal(); updateAllUI(); }
+    function editTransaction(id) { const t = transactions.find(tx => tx.id === id); showTransModal(t); }
+    function deleteTransaction(id) { if(confirm('Delete transaction?')) { transactions = transactions.filter(t => t.id !== id); recalcAllGoalSaved(); saveToLocal(); updateAllUI(); } }
+    function showTransModal(trans = null) {
+        const modal = document.createElement('div'); modal.className = 'modal';
+        const isEdit = !!trans;
+        const goalOptions = '<option value="">None</option>' + goals.map(g=>`<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+        modal.innerHTML = `<div class="modal-content"><h3>${isEdit ? 'Edit' : 'New'} Transaction</h3>
+            <div class="form-group"><label>Date</label><input type="date" id="txDate" value="${trans ? trans.date : new Date().toISOString().slice(0,10)}"></div>
+            <div class="form-group"><label>Title</label><input id="txTitle" value="${trans ? escapeHtml(trans.title) : ''}"></div>
+            <div class="form-group"><label>Amount</label><input type="number" id="txAmount" value="${trans ? trans.amount : ''}" step="0.01"></div>
+            <div class="form-group"><label>Type</label><select id="txType"><option ${trans && trans.type==='income'?'selected':''}>income</option><option ${trans && trans.type==='expense'?'selected':''}>expense</option><option ${trans && trans.type==='saving'?'selected':''}>saving</option></select></div>
+            <div class="form-group"><label>Category</label><input id="txCategory" value="${trans ? escapeHtml(trans.category) : 'General'}"></div>
+            <div class="form-group"><label>Goal</label><select id="txGoalId">${goalOptions}</select></div>
+            <div style="display:flex; gap:0.5rem; justify-content:end;"><button id="cancelModal">Cancel</button><button id="saveModal" class="btn-primary">Save</button></div></div>`;
+        document.body.appendChild(modal);
+        if (trans && trans.goalId) modal.querySelector('#txGoalId').value = trans.goalId;
+        modal.querySelector('#saveModal').onclick = () => {
+            const date = modal.querySelector('#txDate').value;
+            const title = modal.querySelector('#txTitle').value.trim();
+            const amount = parseFloat(modal.querySelector('#txAmount').value);
+            const type = modal.querySelector('#txType').value;
+            const category = modal.querySelector('#txCategory').value.trim() || "General";
+            const goalIdRaw = modal.querySelector('#txGoalId').value;
+            const goalId = goalIdRaw ? parseInt(goalIdRaw) : null;
+            if (!date || !title || isNaN(amount)) return alert('Fill correctly');
+            if (isEdit) {
+                trans.date = date; trans.title = title; trans.amount = amount; trans.type = type; trans.category = category; trans.goalId = goalId;
+                recalcAllGoalSaved(); saveToLocal(); updateAllUI();
+            } else {
+                addTransaction({ date, title, amount, type, category, goalId });
+            }
+            modal.remove();
+        };
+        modal.querySelector('#cancelModal').onclick = () => modal.remove();
+    }
+
+    // Goals CRUD
+    function addGoal(goal) { goal.id = nextGoalId++; goal.saved = goal.saved || 0; goals.push(goal); recalcAllGoalSaved(); saveToLocal(); updateAllUI(); }
+    function editGoal(id) { const g = goals.find(g=>g.id===id); showGoalModal(g); }
+    function deleteGoal(id) { if(confirm('Delete goal? Transactions unlinked.')) { goals = goals.filter(g=>g.id!==id); transactions.forEach(t=>{ if(t.goalId===id) t.goalId=null; }); recalcAllGoalSaved(); saveToLocal(); updateAllUI(); } }
+    function showGoalModal(goal = null) {
+        const modal = document.createElement('div'); modal.className = 'modal';
+        modal.innerHTML = `<div class="modal-content"><h3>${goal ? 'Edit Goal' : 'New Goal'}</h3>
+            <div class="form-group"><label>Name</label><input id="goalName" value="${goal ? escapeHtml(goal.name) : ''}"></div>
+            <div class="form-group"><label>Target Amount</label><input type="number" id="goalTarget" value="${goal ? goal.target : ''}" step="0.01"></div>
+            <div class="form-group"><label>Start Date</label><input type="date" id="goalStart" value="${goal ? goal.startDate : new Date().toISOString().slice(0,10)}"></div>
+            <div class="form-group"><label>End Date (optional)</label><input type="date" id="goalEnd" value="${goal ? (goal.endDate||'') : ''}"></div>
+            <div style="display:flex; gap:0.5rem;"><button id="cancelGoal">Cancel</button><button id="saveGoal" class="btn-primary">Save</button></div></div>`;
+        document.body.appendChild(modal);
+        modal.querySelector('#saveGoal').onclick = () => {
+            const name = modal.querySelector('#goalName').value.trim();
+            const target = parseFloat(modal.querySelector('#goalTarget').value);
+            const startDate = modal.querySelector('#goalStart').value;
+            const endDate = modal.querySelector('#goalEnd').value || null;
+            if (!name || isNaN(target)) return alert('Required fields');
+            if (goal) { goal.name = name; goal.target = target; goal.startDate = startDate; goal.endDate = endDate; recalcAllGoalSaved(); saveToLocal(); updateAllUI(); }
+            else { addGoal({ name, target, saved: 0, startDate, endDate }); }
+            modal.remove();
+        };
+        modal.querySelector('#cancelGoal').onclick = () => modal.remove();
+    }
+
+    function openAssignModal(goalId) {
+        const unassigned = transactions.filter(t => t.goalId !== goalId);
+        if (unassigned.length === 0) return alert('No transactions available');
+        const modal = document.createElement('div'); modal.className = 'modal';
+        let options = unassigned.map(t => `<option value="${t.id}">${t.date} ${t.title} (${formatMoney(t.amount)})</option>`).join('');
+        modal.innerHTML = `<div class="modal-content"><h3>Assign Transaction to Goal</h3><select id="assignSelect">${options}</select><div style="margin-top:1rem;"><button id="assignConfirm">Assign</button> <button id="assignCancel">Cancel</button></div></div>`;
+        document.body.appendChild(modal);
+        modal.querySelector('#assignConfirm').onclick = () => {
+            const transId = parseInt(modal.querySelector('#assignSelect').value);
+            const trans = transactions.find(t=>t.id===transId);
+            if (trans) { trans.goalId = goalId; recalcAllGoalSaved(); saveToLocal(); updateAllUI(); }
+            modal.remove();
+        };
+        modal.querySelector('#assignCancel').onclick = () => modal.remove();
+    }
+
+    // Export / Import / Reset
+    function exportData() { const data = { transactions, goals }; const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'saving_dashboard_backup.json'; a.click(); URL.revokeObjectURL(url); }
+    function importData() { const input = document.createElement('input'); input.type = 'file'; input.accept = 'application/json'; input.onchange = e => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = ev => { try { const data = JSON.parse(ev.target.result); if (data.transactions && data.goals) { transactions = data.transactions; goals = data.goals; nextTransId = Math.max(...transactions.map(t=>t.id),0)+1; nextGoalId = Math.max(...goals.map(g=>g.id),0)+1; recalcAllGoalSaved(); saveToLocal(); updateAllUI(); alert('Import successful'); } else throw new Error(); } catch(e) { alert('Invalid JSON'); } }; reader.readAsText(file); }; input.click(); }
+    function resetAll() { if (confirm('Delete everything?')) { transactions = []; goals = []; nextTransId = 1; nextGoalId = 1; saveToLocal(); updateAllUI(); } }
+
+    // Event bindings & Initialization
+    document.getElementById('addTransBtn').onclick = () => showTransModal(null);
+    document.getElementById('addGoalBtn').onclick = () => showGoalModal(null);
+    document.getElementById('exportDataBtn').onclick = exportData;
+    document.getElementById('importDataBtn').onclick = importData;
+    document.getElementById('resetAllBtn').onclick = resetAll;
+    document.getElementById('filterMonth').addEventListener('change', () => renderTransactions());
+    document.getElementById('filterCategoryTrans').addEventListener('change', () => renderTransactions());
+    document.getElementById('filterGoalTrans').addEventListener('change', () => renderTransactions());
+
+    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+    loadData();
+</script>
+</body>
+</html>
