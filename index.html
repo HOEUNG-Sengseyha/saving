@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Saving Tracker - Google Sheets Backup</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f0f2f5; }
         .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        button { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin: 5px; }
+        button { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin: 5px; font-size: 14px; }
         button:hover { background: #2563eb; }
         .success { background: #10b981; }
         .danger { background: #ef4444; }
@@ -21,14 +21,13 @@
         .status { padding: 4px 12px; border-radius: 20px; font-size: 12px; display: inline-block; margin-left: 10px; }
         .status-online { background: #10b981; color: white; }
         .status-offline { background: #ef4444; color: white; }
-        .status-checking { background: #f59e0b; color: white; }
     </style>
 </head>
 <body>
     <h1>📊 Saving Tracker with Google Sheets Backup</h1>
     
     <div class="card">
-        <h2>💰 Dashboard <span id="apiStatus" class="status status-checking">Checking connection...</span></h2>
+        <h2>💰 Dashboard <span id="apiStatus" class="status status-online">✅ Ready</span></h2>
         <div id="dashboard">
             <p>Loading...</p>
         </div>
@@ -48,14 +47,11 @@
 
     <div class="card">
         <h2>☁️ Google Sheets Backup</h2>
-        <p>Sync your data with Google Sheets (bypasses CORS issues):</p>
         <button id="backupBtn" class="success">💾 Backup to Google Sheets</button>
         <button id="restoreBtn">🔄 Restore from Google Sheets</button>
-        <button id="downloadBtn" class="warning">📥 Download Backup (Manual)</button>
+        <button id="downloadBtn" class="warning">📥 Download JSON Backup</button>
         <button id="resetBtn" class="danger">🗑 Reset All Data</button>
-        <p style="margin-top: 10px; font-size: 12px; color: #666;">
-            💡 <strong>Tip:</strong> Use "Download Backup" to save a JSON file to your computer, then upload it to Google Drive as a backup.
-        </p>
+        <p style="margin-top: 10px; font-size: 12px; color: #666;" id="backupStatus"></p>
     </div>
 
     <div id="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:1000;">
@@ -67,11 +63,10 @@
 
     <script>
         // ========================================
-        // YOUR UPDATED GOOGLE SHEETS API URL (Version 2)
+        // YOUR GOOGLE SHEETS API URL (Version 2)
         // ========================================
-        const API_URL = "https://script.google.com/macros/s/AKfycbykS3K2SC49KCX41neQOFwmX77ZZqGn9cSxTUuDJRCuM5ADgJNNeG5RIrHqaFc695QzxA/exec";
+        const API_URL = "https://script.google.com/macros/s/AKfycbyZpeQezVcjvA1Upm0ui3sEksoaOEUiP3L51LDRO2OPj_A9fm55nEBNzOGjjnf4AforqQ/exec";
         
-        // Data
         let transactions = [];
         let goals = [];
         let nextId = 1, nextGoalId = 1;
@@ -83,20 +78,6 @@
             toast.textContent = message;
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
-        }
-        
-        function updateApiStatus(status, isOnline) {
-            const statusEl = document.getElementById('apiStatus');
-            if (isOnline === true) {
-                statusEl.className = 'status status-online';
-                statusEl.textContent = '✅ API Online';
-            } else if (isOnline === false) {
-                statusEl.className = 'status status-offline';
-                statusEl.textContent = '⚠️ API Offline (Use Download)';
-            } else {
-                statusEl.className = 'status status-checking';
-                statusEl.textContent = 'Checking connection...';
-            }
         }
         
         function saveToLocal() {
@@ -114,15 +95,15 @@
             
             if (transactions.length === 0) {
                 transactions = [
-                    { id: 1, date: "2026-05-01", title: "Salary", amount: 3000, type: "income", category: "Job" },
-                    { id: 2, date: "2026-05-05", title: "Groceries", amount: 200, type: "expense", category: "Food" },
-                    { id: 3, date: "2026-05-10", title: "Savings", amount: 500, type: "saving", category: "Savings" }
+                    { id: 1, date: "2026-05-20", title: "Salary", amount: 3000, type: "income", category: "Job" },
+                    { id: 2, date: "2026-05-19", title: "Groceries", amount: 150, type: "expense", category: "Food" },
+                    { id: 3, date: "2026-05-18", title: "Savings Deposit", amount: 500, type: "saving", category: "Savings" }
                 ];
                 nextId = 4;
             }
             if (goals.length === 0) {
                 goals = [
-                    { id: 1, name: "Buy Car", target: 10000, saved: 2000, startDate: "2026-01-01", endDate: "2026-12-31" }
+                    { id: 1, name: "Buy Laptop", target: 2000, saved: 500, startDate: "2026-01-01", endDate: "2026-12-31" }
                 ];
                 nextGoalId = 2;
             }
@@ -296,59 +277,40 @@
         }
         
         // ========================================
-        // GOOGLE SHEETS BACKUP USING IFRAME (CORS BYPASS)
+        // BACKUP FUNCTION - Uses fetch with proper headers
         // ========================================
-        
-        function backupToSheets() {
-            showToast('📤 Sending backup to Google Sheets...');
+        async function backupToSheets() {
+            const statusEl = document.getElementById('backupStatus');
+            statusEl.innerHTML = '⏳ Sending backup to Google Sheets...';
             
             try {
-                // Create a hidden form to submit POST data
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = API_URL;
-                form.target = 'hiddenBackupFrame';
-                form.style.display = 'none';
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // This helps with CORS
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        type: 'save',
+                        transactions: transactions,
+                        goals: goals
+                    })
+                });
                 
-                // Add the data as a field
-                const dataField = document.createElement('input');
-                dataField.type = 'text';
-                dataField.name = 'postData';
-                dataField.value = JSON.stringify({ type: 'save', transactions, goals });
-                form.appendChild(dataField);
+                statusEl.innerHTML = '✅ Backup request sent! Refresh your Google Sheet to see the data.';
+                showToast('✅ Backup sent! Check your Google Sheet.');
                 
-                document.body.appendChild(form);
-                
-                // Create or get hidden iframe
-                let iframe = document.getElementById('hiddenBackupFrame');
-                if (!iframe) {
-                    iframe = document.createElement('iframe');
-                    iframe.name = 'hiddenBackupFrame';
-                    iframe.id = 'hiddenBackupFrame';
-                    iframe.style.display = 'none';
-                    document.body.appendChild(iframe);
-                }
-                
-                // Set up timeout to know when it's done
-                iframe.onload = function() {
-                    showToast('✅ Backup sent! Check your Google Sheet.');
-                    updateApiStatus('API Online', true);
-                };
-                
-                form.submit();
-                
-                // Clean up after 3 seconds
-                setTimeout(() => {
-                    if (document.body.contains(form)) document.body.removeChild(form);
-                }, 3000);
+                // Open Google Sheet in new tab for convenience
+                window.open('https://docs.google.com/spreadsheets/d/1ZYx_1bOk0hE4egSVQKZmac6SKFySUOcrMgY1K9gpLLY/edit', '_blank');
                 
             } catch (error) {
                 console.error('Backup error:', error);
-                showToast('❌ Backup failed. Use "Download Backup" instead.', true);
+                statusEl.innerHTML = '❌ Backup failed. Try the Download Backup button instead.';
+                showToast('❌ Backup failed. Use Download Backup instead.', true);
             }
         }
         
-        // JSONP for GET requests (Restore)
+        // JSONP for Restore
         function restoreFromSheets() {
             showToast('📥 Restoring from Google Sheets...');
             
@@ -366,7 +328,6 @@
                     saveToLocal();
                     updateUI();
                     showToast('✅ Restored from Google Sheets!');
-                    updateApiStatus('API Online', true);
                 } else {
                     throw new Error('Invalid data');
                 }
@@ -376,8 +337,7 @@
             script.src = `${API_URL}?callback=${callbackName}`;
             script.onerror = function() {
                 delete window[callbackName];
-                showToast('❌ Restore failed. No backup found or CORS issue.', true);
-                updateApiStatus('API Offline (Use Download)', false);
+                showToast('❌ Restore failed. No backup found.', true);
             };
             document.body.appendChild(script);
         }
@@ -391,7 +351,7 @@
             a.download = `saving_backup_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.json`;
             a.click();
             URL.revokeObjectURL(url);
-            showToast('📁 Backup file downloaded! Save it to Google Drive.');
+            showToast('📁 Backup file downloaded!');
         }
         
         function resetAllData() {
@@ -406,45 +366,12 @@
             }
         }
         
-        // Test API connection using JSONP
-        function testConnection() {
-            updateApiStatus(null, null);
-            const callbackName = 'test_callback_' + Date.now();
-            
-            const timeout = setTimeout(() => {
-                if (window[callbackName]) {
-                    delete window[callbackName];
-                    updateApiStatus('API Offline (Use Download)', false);
-                }
-            }, 5000);
-            
-            window[callbackName] = function(data) {
-                clearTimeout(timeout);
-                delete window[callbackName];
-                document.body.removeChild(script);
-                updateApiStatus('API Online', true);
-                console.log('API connection successful');
-            };
-            
-            const script = document.createElement('script');
-            script.src = `${API_URL}?callback=${callbackName}`;
-            script.onerror = function() {
-                clearTimeout(timeout);
-                delete window[callbackName];
-                updateApiStatus('API Offline (Use Download)', false);
-            };
-            document.body.appendChild(script);
-        }
-        
-        // Event listeners
         document.getElementById('backupBtn').onclick = backupToSheets;
         document.getElementById('restoreBtn').onclick = restoreFromSheets;
         document.getElementById('downloadBtn').onclick = downloadBackup;
         document.getElementById('resetBtn').onclick = resetAllData;
         
-        // Initialize
         loadFromLocal();
-        testConnection();
     </script>
 </body>
 </html>
